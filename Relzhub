@@ -1,0 +1,642 @@
+local tool = script.Parent
+
+-- Function to handle tool activation
+local function onActivated()
+    local player = game.Players:GetPlayerFromCharacter(tool.Parent)
+    if player then
+        local character = player.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                -- Increase WalkSpeed
+                humanoid.WalkSpeed = 32 -- Double the default speed (16)
+                
+                -- Reset speed after 5 seconds
+                wait(5)
+                humanoid.WalkSpeed = 16
+            end
+        end
+    end
+end
+
+tool.Activated:Connect(onActivated)
+local part = script.Parent
+
+local function onClick()
+    part.BrickColor = BrickColor.Random()
+end
+
+part.Touched:Connect(onClick)
+-- Define the teleportation coordinates
+local targetPosition = Vector3.new(0, 50, 0) -- Change these values to your desired coordinates
+
+-- Function to teleport the player
+local function teleportPlayer()
+    local player = game.Players.LocalPlayer
+    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        player.Character.HumanoidRootPart.CFrame = CFrame.new(targetPosition)
+    end
+end
+
+-- Keybind to teleport the player (example: pressing "T")
+local userInputService = game:GetService("UserInputService")
+
+userInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    if input.KeyCode == Enum.KeyCode.T and not gameProcessedEvent then
+        teleportPlayer()
+    end
+end)
+-- References to GUI elements
+local dropdownButton = script.Parent:WaitForChild("DropdownButton")
+local dropdownMenu = script.Parent:WaitForChild("DropdownMenu")
+
+-- References to menu items
+local meleeButton = dropdownMenu:WaitForChild("MeleeButton")
+local swordButton = dropdownMenu:WaitForChild("SwordButton")
+local gunButton = dropdownMenu:WaitForChild("GunButton")
+local fruitButton = dropdownMenu:WaitForChild("FruitButton")
+
+-- Toggle dropdown menu visibility
+dropdownButton.MouseButton1Click:Connect(function()
+    dropdownMenu.Visible = not dropdownMenu.Visible
+end)
+
+-- Function to handle selection
+local function handleSelection(selection)
+    print("Selected: " .. selection)
+    dropdownButton.Text = "Using: " .. selection
+    dropdownMenu.Visible = false
+
+    -- Here you can add the logic to switch between melee, sword, gun, and fruit
+    -- Example: player.WeaponType = selection
+end
+
+-- Connect buttons to handleSelection function
+meleeButton.MouseButton1Click:Connect(function()
+    handleSelection("Melee")
+end)
+
+swordButton.MouseButton1Click:Connect(function()
+    handleSelection("Sword")
+end)
+
+gunButton.MouseButton1Click:Connect(function()
+    handleSelection("Gun")
+end)
+
+fruitButton.MouseButton1Click:Connect(function()
+    handleSelection("Fruit")
+end)
+local TweenService = game:GetService("TweenService")
+
+local base = script.Parent
+local chest = base.Parent
+local lid = chest:WaitForChild("Lid")
+local clickDetector = base:WaitForChild("ClickDetector")
+
+-- Define the goal position for the lid (adjust as necessary)
+local goalPosition = CFrame.new(lid.Position) * CFrame.Angles(0, 0, math.rad(-90)) -- Rotating the lid 90 degrees
+
+-- Create the tween information
+local tweenInfo = TweenInfo.new(
+    1, -- Duration in seconds
+    Enum.EasingStyle.Sine, -- Easing style
+    Enum.EasingDirection.Out, -- Easing direction
+    0, -- Repeat count (0 = no repeat)
+    false, -- Reverses (true = reverse once when tween completes)
+    0 -- Delay time
+)
+
+-- Create the tween
+local goal = {CFrame = goalPosition}
+local lidTween = TweenService:Create(lid, tweenInfo, goal)
+
+-- Function to open the chest
+local function openChest()
+    lidTween:Play()
+end
+
+-- Connect the click detector to open the chest
+clickDetector.MouseClick:Connect(openChest)
+local toggleButton = script.Parent
+local shopGui = toggleButton.Parent:WaitForChild("ShopFrame")
+
+-- Initially hide the shop
+shopGui.Visible = false
+
+-- Function to toggle the shop visibility
+local function toggleShop()
+    shopGui.Visible = not shopGui.Visible
+    if shopGui.Visible then
+        toggleButton.Text = "Close Shop"
+    else
+        toggleButton.Text = "Open Shop"
+    end
+end
+
+-- Connect the button to the toggle function
+toggleButton.MouseButton1Click:Connect(toggleShop)
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+
+local dropdownButton = script.Parent:WaitForChild("DropdownButton")
+local optionsFrame = script.Parent:WaitForChild("OptionsFrame")
+
+local bosses = {
+    ["Boss 1"] = Vector3.new(100, 10, 100), -- Replace with actual boss coordinates
+    ["Boss 2"] = Vector3.new(200, 10, 200), -- Replace with actual boss coordinates
+    -- Add more bosses as needed
+}
+
+-- Function to toggle the visibility of the options frame
+local function toggleDropdown()
+    optionsFrame.Visible = not optionsFrame.Visible
+end
+
+-- Function to teleport to the selected boss
+local function teleportToBoss(bossPosition)
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(bossPosition)
+    end
+end
+
+-- Connect the dropdown button click event
+dropdownButton.MouseButton1Click:Connect(toggleDropdown)
+
+-- Connect boss option buttons
+for bossName, bossPosition in pairs(bosses) do
+    local button = optionsFrame:FindFirstChild(bossName .. "Button")
+    if button then
+        button.MouseButton1Click:Connect(function()
+            teleportToBoss(bossPosition)
+            optionsFrame.Visible = false -- Hide the options frame after selection
+            dropdownButton.Text = bossName -- Update the dropdown button text
+        end)
+    end
+end
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local QuestService = ReplicatedStorage:WaitForChild("QuestService")
+local QuestData = require(ReplicatedStorage:WaitForChild("QuestData"))
+
+local player = Players.LocalPlayer
+local questInProgress = false
+
+-- Function to check if the player is close to a quest NPC
+local function checkQuestNPC()
+    for _, npc in ipairs(workspace:GetChildren()) do
+        if npc:IsA("Model") and npc.Name == "QuestNPC" then
+            local distance = (player.Character.HumanoidRootPart.Position - npc.HumanoidRootPart.Position).magnitude
+            if distance < 10 then
+                return npc
+            end
+        end
+    end
+    return nil
+end
+
+-- Function to start a quest
+local function startQuest(npc)
+    if not questInProgress then
+        local questData = QuestData[npc.Quest.Value] -- Assuming the NPC has a "Quest" value referencing the quest ID
+        if questData then
+            questInProgress = true
+            -- Display quest dialogue or instructions
+            print("Started quest: " .. questData.Name)
+        end
+    end
+end
+
+-- Function to complete a quest
+local function completeQuest(npc)
+    if questInProgress then
+        local questData = QuestData[npc.Quest.Value]
+        if questData and questData.Objective == "Defeat" then
+            -- Check if the player has defeated the required enemies
+            local enemiesDefeated = true -- Replace this with your own logic to check quest progress
+            if enemiesDefeated then
+                -- Reward the player
+                player.Backpack:FindFirstChild(questData.Reward):Clone().Parent = player.Backpack
+                -- Complete the quest
+                questInProgress = false
+                -- Display completion message
+                print("Quest completed: " .. questData.Name)
+            else
+                -- Display message indicating quest progress
+                print("Defeat more enemies to complete the quest.")
+            end
+        end
+    end
+end
+
+-- Main loop to check for quest NPCs and interact with them
+while true do
+    wait(1) -- Adjust the interval as needed
+
+    local questNPC = checkQuestNPC()
+    if questNPC then
+        if not questInProgress then
+            startQuest(questNPC)
+        else
+            completeQuest(questNPC)
+        end
+    end
+end
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local QuestService = ReplicatedStorage:WaitForChild("QuestService")
+local SaberQuestData = require(ReplicatedStorage:WaitForChild("SaberQuestData"))
+
+local player = Players.LocalPlayer
+local questInProgress = false
+
+-- Function to check if the player is close to the saber quest NPC
+local function checkSaberQuestNPC()
+    for _, npc in ipairs(workspace:GetChildren()) do
+        if npc:IsA("Model") and npc.Name == "SaberQuestNPC" then
+            local distance = (player.Character.HumanoidRootPart.Position - npc.HumanoidRootPart.Position).magnitude
+            if distance < 10 then
+                return npc
+            end
+        end
+    end
+    return nil
+end
+
+-- Function to start the saber quest
+local function startSaberQuest(npc)
+    if not questInProgress then
+        -- Check if the player meets the requirements to start the quest
+        -- For example, check if the player has completed any prerequisite quests
+        -- If requirements are met, start the quest
+        questInProgress = true
+        -- Display quest dialogue or instructions
+        print("Started Saber Quest!")
+    end
+end
+
+-- Function to complete the saber quest
+local function completeSaberQuest(npc)
+    if questInProgress then
+        -- Check if the player has fulfilled the quest requirements
+        local saberQuestData = SaberQuestData[player.Name]
+        if saberQuestData and saberQuestData.enemiesDefeated >= SaberQuestData.RequiredEnemies then
+            -- Reward the player for completing the quest
+            player.Backpack:FindFirstChild("Saber"):Clone().Parent = player.Backpack
+            -- Complete the quest
+            questInProgress = false
+            -- Display completion message
+            print("Saber Quest Completed!")
+        else
+            -- Display message indicating quest progress
+            print("Defeat more enemies to complete the Saber Quest.")
+        end
+        
+        local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local QuestService = ReplicatedStorage:WaitForChild("QuestService")
+local SecondSeaQuestData = require(ReplicatedStorage:WaitForChild("SecondSeaQuestData"))
+
+local player = Players.LocalPlayer
+local questInProgress = false
+
+-- Function to check if the player is close to the quest NPC
+local function checkQuestNPC()
+    for _, npc in ipairs(workspace:GetChildren()) do
+        if npc:IsA("Model") and npc.Name == "SecondSeaQuestNPC" then
+            local distance = (player.Character.HumanoidRootPart.Position - npc.HumanoidRootPart.Position).magnitude
+            if distance < 10 then
+                return npc
+            end
+        end
+    end
+    return nil
+end
+
+-- Function to start the quest
+local function startQuest(npc)
+    if not questInProgress then
+        -- Check if the player meets the requirements to start the quest
+        -- For example, check if the player has completed any prerequisite quests
+        -- If requirements are met, start the quest
+        questInProgress = true
+        -- Display quest dialogue or instructions
+        print("Started Second Sea Quest!")
+    end
+end
+
+-- Function to complete the quest
+local function completeQuest(npc)
+    if questInProgress then
+        -- Check if the player has fulfilled the quest requirements
+        local questData = SecondSeaQuestData[player.Name]
+        if questData and questData.enemiesDefeated >= SecondSeaQuestData.RequiredEnemies then
+            -- Reward the player for completing the quest
+            -- You can customize the reward based on your game's design
+            print("Second Sea Quest Completed! Reward: [Reward Name]")
+            -- Mark the quest as completed and reset progress
+            questInProgress = false
+        else
+            -- Display message indicating quest progress
+            print("Defeat more enemies to complete the Second Sea Quest.")
+        end
+    end
+end
+
+-- Main loop to check for the quest NPC and interact with it
+while true do
+    wait(1) -- Adjust the interval as needed
+
+    local questNPC = checkQuestNPC()
+    if questNPC then
+        if not questInProgress then
+            startQuest(questNPC)
+        else
+            completeQuest(questNPC)
+        end
+    end
+end
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Fruits = ReplicatedStorage:WaitForChild("Fruits")
+
+local player = Players.LocalPlayer
+local fruitsFound = {}
+
+-- Function to check if the player is close to a fruit spawn
+local function checkFruitSpawns()
+    for _, fruitSpawn in ipairs(Fruits:GetChildren()) do
+        if fruitSpawn:IsA("Model") then
+            local distance = (player.Character.HumanoidRootPart.Position - fruitSpawn.Position).magnitude
+            if distance < 10 and not fruitsFound[fruitSpawn.Name] then
+                return fruitSpawn
+            end
+        end
+    end
+    return nil
+end
+
+-- Function to navigate towards the fruit spawn
+local function navigateToFruitSpawn(fruitSpawn)
+    -- Example: Move player towards the fruit spawn using pathfinding or simple movement
+    print("Navigating towards fruit spawn: " .. fruitSpawn.Name)
+end
+
+-- Main loop to check for nearby fruit spawns
+while true do
+    wait(1) -- Adjust the interval as needed
+
+    local fruitSpawn = checkFruitSpawns()
+    if fruitSpawn then
+        navigateToFruitSpawn(fruitSpawn)
+        fruitsFound[fruitSpawn.Name] = true
+    end
+end
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Fruits = ReplicatedStorage:WaitForChild("Fruits")
+local InventoryService = ReplicatedStorage:WaitForChild("InventoryService")
+
+local player = Players.LocalPlayer
+
+-- Function to check if the player has collected a fruit
+local function checkForFruit()
+    for _, fruit in ipairs(player.Backpack:GetChildren()) do
+        if fruit:IsA("Model") and fruit:IsDescendantOf(Fruits) then
+            return fruit
+        end
+    end
+    return nil
+end
+
+-- Function to store the collected fruit
+local function storeFruit(fruit)
+    -- Example: Add the fruit to the player's inventory using InventoryService
+    InventoryService:FireServer("StoreFruit", fruit.Name)
+    -- Example: Remove the fruit from the player's backpack
+    fruit:Destroy()
+    print("Stored fruit: " .. fruit.Name)
+end
+
+-- Main loop to check for collected fruits
+while true do
+    wait(1) -- Adjust the interval as needed
+
+    local collectedFruit = checkForFruit()
+    if collectedFruit then
+        storeFruit(collectedFruit)
+    end
+end
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Fruits = ReplicatedStorage:WaitForChild("Fruits")
+
+-- List of fruit types
+local fruitTypes = {
+    "Apple",
+    "Banana",
+    "Orange",
+    -- Add more fruit types as needed
+}
+
+-- Function to spawn a random fruit
+local function spawnRandomFruit()
+    local randomFruitType = fruitTypes[math.random(1, #fruitTypes)]
+    local fruitModel = Fruits:FindFirstChild(randomFruitType)
+    if fruitModel then
+        -- Clone and position the fruit model at a random location in the game world
+        local clonedFruit = fruitModel:Clone()
+        clonedFruit.Position = Vector3.new(math.random(-100, 100), 10, math.random(-100, 100)) -- Adjust the position range as needed
+        clonedFruit.Parent = workspace
+        print("Spawned random fruit: " .. randomFruitType)
+    else
+        print("Fruit model not found for type: " .. randomFruitType)
+    end
+end
+
+-- Main loop to spawn random fruits
+while true do
+    wait(60) -- Adjust the interval as needed (e.g., spawn a fruit every minute)
+
+    spawnRandomFruit()
+end
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Factory = ReplicatedStorage:WaitForChild("Factory")
+
+-- List of items produced by the factory
+local producedItems = {
+    "Wood",
+    "Iron",
+    "Steel",
+    -- Add more items as needed
+}
+
+-- Function to produce an item
+local function produceItem(itemType)
+    local itemModel = Factory:FindFirstChild(itemType)
+    if itemModel then
+        -- Clone and position the item model at a designated output location in the factory
+        local clonedItem = itemModel:Clone()
+        clonedItem.Position = Vector3.new(10, 5, 10) -- Adjust the output position as needed
+        clonedItem.Parent = workspace
+        print("Produced item: " .. itemType)
+    else
+        print("Item model not found for type: " .. itemType)
+    end
+end
+
+-- Main loop to produce items
+while true do
+    wait(60) -- Adjust the interval as needed (e.g., produce an item every minute)
+
+    -- Randomly select an item to produce
+    local randomItem = producedItems[math.random(1, #producedItems)]
+    produceItem(randomItem)
+end-- Assuming the script is a LocalScript placed inside a TextButton in the StarterGui
+
+local ToggleButton = script.Parent -- Reference to the TextButton
+local ScriptToToggle = workspace.ScriptToToggle -- Reference to the script you want to toggle
+
+-- Function to toggle the visibility of the script
+local function toggleScriptVisibility()
+    ScriptToToggle.Disabled = not ScriptToToggle.Disabled
+    if ScriptToToggle.Disabled then
+        ToggleButton.Text = "Open Script"
+    else
+        ToggleButton.Text = "Close Script"
+    end
+end
+
+-- Connect the button click event to the toggle function
+ToggleButton.MouseButton1Click:Connect(toggleScriptVisibility)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SeaEvents = ReplicatedStorage:WaitForChild("SeaEvents")
+
+-- List of sea events
+local seaEventTypes = {
+    "EnemyAttack",
+    "TreasureHunt",
+    "Storm",
+    -- Add more sea events as needed
+}
+
+-- Function to trigger a sea event
+local function triggerSeaEvent(eventType)
+    local eventModel = SeaEvents:FindFirstChild(eventType)
+    if eventModel then
+        -- Clone and position the event model at a random location in the sea area
+        local clonedEvent = eventModel:Clone()
+        clonedEvent.Position = Vector3.new(math.random(-1000, 1000), 5, math.random(-1000, 1000)) -- Adjust the spawn area as needed
+        clonedEvent.Parent = workspace
+        print("Triggered sea event: " .. eventType)
+    else
+        print("Sea event model not found for type: " .. eventType)
+    end
+end
+
+-- Main loop to trigger sea events
+while true do
+    wait(600) -- Adjust the interval as needed (e.g., trigger an event every 10 minutes)
+
+    -- Randomly select a sea event to trigger
+    local randomEvent = seaEventTypes[math.random(1, #seaEventTypes)]
+    triggerSeaEvent(randomEvent)
+end
+local Players = game:GetService("Players")
+local MirageIsland = workspace:WaitForChild("MirageIsland")
+
+-- Function to check if Mirage Island is present
+local function checkMirageIsland()
+    return MirageIsland ~= nil
+end
+
+-- Function to navigate the player towards Mirage Island
+local function navigateToMirageIsland()
+    if MirageIsland then
+        -- Example: Move player towards Mirage Island using pathfinding or simple movement
+        print("Navigating towards Mirage Island!")
+    else
+        print("Mirage Island not found.")
+    end
+end
+
+-- Main loop to continuously check for Mirage Island
+while true do
+    wait(60) -- Adjust the interval as needed
+
+    if checkMirageIsland() then
+        navigateToMirageIsland()
+        break -- Exit the loop once Mirage Island is found
+    end
+end
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+local gear = workspace.Gear -- Assuming "Gear" is the name of the gear you want to tween towards
+
+-- Function to tween the player towards the gear's position
+local function tweenToGear()
+    local gearPosition = gear.Position
+    local playerPosition = player.Character and player.Character.HumanoidRootPart.Position
+    
+    if not playerPosition then
+        return
+    end
+
+    local distance = (gearPosition - playerPosition).magnitude
+    local tweenInfo = TweenInfo.new(distance / 50, Enum.EasingStyle.Linear) -- Adjust the duration based on distance
+
+    local tween = TweenService:Create(player.Character.HumanoidRootPart, tweenInfo, {Position = gearPosition})
+    tween:Play()
+end
+
+-- Call the tween function when the player equips the gear (e.g., by pressing a button)
+-- Replace "MouseButton1Click" with the appropriate event based on your game's mechanics
+gear.MouseButton1Click:Connect(tweenToGear)
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local DealerStock = ReplicatedStorage:WaitForChild("DealerStock")
+
+-- Assuming the dealer stock indicator is a part named "StockIndicator" inside a model named "Dealer"
+local dealerModel = workspace:WaitForChild("Dealer")
+local stockIndicator = dealerModel:FindFirstChild("StockIndicator")
+
+-- Function to advance the dealer stock indicator
+local function advanceDealerStock()
+    if not stockIndicator then
+        return
+    end
+    
+    local currentRotation = stockIndicator.Rotation
+    local nextRotation = currentRotation + Vector3.new(0, 90, 0) -- Rotate 90 degrees clockwise (adjust as needed)
+
+    local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
+    local tween = TweenService:Create(stockIndicator, tweenInfo, {Rotation = nextRotation})
+    tween:Play()
+end
+
+-- Call the advance function when you want to advance the dealer stock (e.g., when a player interacts with the dealer)
+-- Replace "MouseButton1Click" with the appropriate event based on your game's mechanics
+dealerModel.MouseButton1Click:Connect(advanceDealerStock)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Pirates = ReplicatedStorage:WaitForChild("Pirates")
+
+-- Function to trigger a pirate raid event
+local function triggerPirateRaid()
+    -- Spawn pirates at various locations around the player or designated raid area
+    for i = 1, 10 do -- Adjust the number of pirates spawned as needed
+        local pirate = Pirates:FindFirstChild("Pirate"):Clone()
+        pirate.Position = Vector3.new(math.random(-100, 100), 10, math.random(-100, 100)) -- Adjust spawn area as needed
+        pirate.Parent = workspace
+    end
+    print("Pirate raid triggered!")
+end
+
+-- Main loop to trigger pirate raids at regular intervals
+while true do
+    wait(600) -- Adjust the interval as needed (e.g., trigger a raid every 10 minutes)
+
+    triggerPirateRaid()
+end
